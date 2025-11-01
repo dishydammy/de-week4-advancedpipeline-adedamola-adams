@@ -19,7 +19,7 @@ class APIClient:
         if not pagination_limit or pagination_limit <= 0:
             raise ValueError("Pagination limit must be a positive integer.")
             
-        self.base_url = base_url
+        self.base_url = base_url.rstrip('/')
         self.pagination_limit = pagination_limit
         logging.info(f"APIClient initialized for {self.base_url} with limit {self.pagination_limit}")
 
