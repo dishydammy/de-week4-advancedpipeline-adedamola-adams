@@ -7,7 +7,8 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 class APIClient:
     """
-    A client to handle communication with the FakestoreAPI
+    A client to handle communication with the FakestoreAPI,
+    including pagination and error handling for all data sources.
     """
 
     def __init__(self, base_url: str, pagination_limit: int):
@@ -19,7 +20,7 @@ class APIClient:
         if not pagination_limit or pagination_limit <= 0:
             raise ValueError("Pagination limit must be a positive integer.")
             
-        self.base_url = base_url.rstrip('/')
+        self.base_url = base_url.rstrip('/')  # Remove trailing slash
         self.pagination_limit = pagination_limit
         logging.info(f"APIClient initialized for {self.base_url} with limit {self.pagination_limit}")
 
@@ -34,16 +35,9 @@ class APIClient:
             response = requests.get(url, params=params)
             response.raise_for_status()
             return response.json()
-        except requests.exceptions.HTTPError as http_err:
-            logging.error(f"HTTP error occurred: {http_err} for URL: {url}")
-        except requests.exceptions.ConnectionError as conn_err:
-            logging.error(f"Connection error occurred: {conn_err} for URL: {url}")
-        except requests.exceptions.Timeout as timeout_err:
-            logging.error(f"Timeout error occurred: {timeout_err} for URL: {url}")
         except requests.exceptions.RequestException as req_err:
-            logging.error(f"An unexpected error occurred: {req_err} for URL: {url}")
-
-        return None
+            logging.error(f"An error occurred during request to {url}: {req_err}")
+            return None
 
     def get_all_users(self) -> Optional[List[Dict[str, Any]]]:
         """
@@ -51,31 +45,44 @@ class APIClient:
         """
         return self._make_request("/users")  # type: ignore
 
+    def _fetch_paginated_data(self, endpoint: str) -> List[Dict[str, Any]]:
+        """
+        A generic helper to fetch all data from a paginated endpoint.
+        """
+        all_data: List[Dict[str, Any]] = []
+        page = 1
+        
+        while True:
+            logging.info(f"Fetching {endpoint} page {page}...")
+            params = {
+                'limit': self.pagination_limit,
+                'page': page 
+            }
+            
+            data = self._make_request(endpoint, params=params)
+            
+            if data is None:
+                logging.error(f"Failed to fetch {endpoint} page. Stopping pagination.")
+                break
+                
+            if not data:
+                logging.info(f"Reached end of {endpoint} list. Pagination complete.")
+                break
+                
+            all_data.extend(data)
+            page += 1
+            
+        return all_data
+
     def get_all_products(self) -> List[Dict[str, Any]]:
         """
         Fetches all products from the API, handling pagination.
         """
-        all_products: List[Dict[str, Any]] = []
-        page = 1
-        
-        while True:
-            logging.info(f"Fetching products page {page}...")
-            params = {
-                'limit': self.pagination_limit,
-                'page': page
-            }
-            
-            data = self._make_request("/products", params=params)
-            
-            if data is None:
-                logging.error("Failed to fetch products page. Stopping pagination.")
-                break
-                
-            if not data:
-                logging.info("Reached end of product list. Pagination complete.")
-                break
-                
-            all_products.extend(data)
-            page += 1
-            
-        return all_products
+        return self._fetch_paginated_data("/products")
+
+    def get_all_carts(self) -> List[Dict[str, Any]]:
+        """
+        Fetches all carts from the API, handling pagination.
+        This is the "bridge" data connecting users to products.
+        """
+        return self._fetch_paginated_data("/carts")
