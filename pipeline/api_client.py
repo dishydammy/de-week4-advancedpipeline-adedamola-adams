@@ -7,8 +7,8 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 class APIClient:
     """
-    A client to handle communication with the FakestoreAPI,
-    including pagination and error handling for all data sources.
+    A client to handle communication with the fakestoreapi.com API.
+    This version implements the pagination loop as required by the assignment.
     """
 
     def __init__(self, base_url: str, pagination_limit: int):
@@ -20,13 +20,13 @@ class APIClient:
         if not pagination_limit or pagination_limit <= 0:
             raise ValueError("Pagination limit must be a positive integer.")
             
-        self.base_url = base_url.rstrip('/')  # Remove trailing slash
+        self.base_url = base_url.rstrip('/')
         self.pagination_limit = pagination_limit
         logging.info(f"APIClient initialized for {self.base_url} with limit {self.pagination_limit}")
 
     def _make_request(self, endpoint: str, params: Optional[Dict[str, Any]] = None) -> Union[list, dict, None]:
         """
-        A private helper method to handle the actual HTTP request and error handling.
+        A private helper method to handle the actual HTTP request (no headers).
         """
         url = f"{self.base_url}/{endpoint.lstrip('/')}"
         logging.info(f"Making GET request to: {url} with params: {params}")
@@ -43,11 +43,12 @@ class APIClient:
         """
         Fetches all users from the API.
         """
-        return self._make_request("/users")  # type: ignore
+        return self._make_request("/users")
 
     def _fetch_paginated_data(self, endpoint: str) -> List[Dict[str, Any]]:
         """
-        A generic helper to fetch all data from a paginated endpoint.
+        A generic helper to fetch all data from a paginated endpoint
+        that uses the 'page' parameter and returns an empty list when done.
         """
         all_data: List[Dict[str, Any]] = []
         page = 1
@@ -83,6 +84,5 @@ class APIClient:
     def get_all_carts(self) -> List[Dict[str, Any]]:
         """
         Fetches all carts from the API, handling pagination.
-        This is the "bridge" data connecting users to products.
         """
         return self._fetch_paginated_data("/carts")
