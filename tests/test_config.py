@@ -31,7 +31,7 @@ def test_config_manager_load_success(fake_config_file: str):
     output_config = manager.get_output_config()
 
     assert api_config['base_url'] == "https://fake-api-url.com"
-    assert api_config['pagination_limit'] == 10  # Check it's an integer
+    assert api_config['pagination_limit'] == 10
     assert output_config['filename'] == "test_report.json"
     
 def test_config_manager_file_not_found():
